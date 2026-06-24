@@ -2,4 +2,4 @@
 active_plugins:
   - texture_mapping   # 纹理贴图插件
   - light_control     # 光照材质调节插件
-  # - model_measure   # 测距插件，取消注释启用
+  - view_toolbar    # 新增顶部工具栏插件
