@@ -1,0 +1,11 @@
+# Python编译缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# IDE缓存
+.idea/
+#.vscode/
+# 日志、临时文件
+*.log
+temp.py
