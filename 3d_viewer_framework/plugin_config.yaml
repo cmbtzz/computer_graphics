@@ -2,4 +2,4 @@
 active_plugins:
   - texture_mapping   # 纹理贴图插件
   - light_control     # 光照材质调节插件
-  - view_toolbar    # 新增顶部工具栏插件
+  - view_toolbar    # 顶部工具栏插件

@@ -1,3 +1,6 @@
+'''
+    准备obj三维模型，从modelnet40数据集的off文件中读取，转换为obj格式，并保存到指定目录。
+'''
 import os
 import random
 import numpy as np
