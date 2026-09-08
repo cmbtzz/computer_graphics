@@ -54,6 +54,9 @@ if __name__ == "__main__":
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         active_list = cfg.get("active_plugins", [])
+        # 如果获取到的是None，转换为空列表
+        if active_list is None:
+            active_list = []
     except FileNotFoundError:
         print("提示：未找到 plugin_config.yaml，自动加载所有可用插件")
         active_list = list(plugin_mapping.keys())
