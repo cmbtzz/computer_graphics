@@ -17,7 +17,9 @@ merge_3d_viewer_framework.txt
 #chapter02
 chapter02/output
 chapter02/images
+chapter02/obj
 chapter02/sfm_mvs.py
+chapter02/poisson_surface.py
 
 # 实验代码
 experiment
