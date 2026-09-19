@@ -1,5 +1,6 @@
 # 启用的插件列表，注释/删除对应项即可关闭功能
 active_plugins:
-  - texture_mapping   # 纹理贴图插件
-  - light_control     # 光照材质调节插件
+  - experiment1_color # 实验一：HSV/RGB 与 RGB 立方体
+  - texture_mapping # 纹理贴图插件
+  - light_control   # 光照材质调节插件
   - view_toolbar    # 顶部工具栏插件

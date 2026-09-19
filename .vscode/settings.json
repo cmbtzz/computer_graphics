@@ -1,10 +1,4 @@
 {
-    "python-envs.pythonProjects": [
-        {
-            "path": ".",
-            "envManager": "ms-python.python:conda",
-            "packageManager": "ms-python.python:conda"
-        }
-    ],
-    "terminal.integrated.windowsUseConptyDll": true
+    "terminal.integrated.windowsUseConptyDll": true,
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
 }
