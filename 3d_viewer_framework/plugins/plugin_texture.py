@@ -1,129 +1,131 @@
+"""普通贴图选择，作为模型设置中第一个纵向分组。"""
+
 import os
-from PyQt5.QtWidgets import QWidget, QScrollArea, QGridLayout, QPushButton, QVBoxLayout
-from PyQt5.QtCore import Qt, QSize, QTimer
-from PyQt5.QtGui import QPixmap, QIcon
+
 import vtk
+from PyQt5.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton, QWidget
+
 from plugins.base_plugin import Base3DPlugin
+from plugins.base_texture_ui import CollapsibleSection, ensure_model_settings_scroll
+
+
+class TextureGrid(QWidget):
+    resized = pyqtSignal()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resized.emit()
+
 
 class TexturePlugin(Base3DPlugin):
-    # yaml配置里写这个字符串
     plugin_cls_name = "texture_mapping"
     plugin_name = "texture_mapping"
-    plugin_desc = "纹理贴图功能插件"
+    plugin_desc = "普通纹理贴图"
 
     def __init__(self, viewer_ctx):
         super().__init__(viewer_ctx)
         self.selected_texture_path = None
         self.selected_texture_btn = None
-        self.texture_grid = None
-        self.texture_scroll = None
+        self.texture = None
+        self.buttons = {}
+        self.texture_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/texture"))
         self.timer = QTimer()
         self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.load_texture_images)
-        # 使用项目BASE_DIR构建绝对路径，不要用../
-        self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        self.texture_dir = os.path.normpath(os.path.join(self.BASE_DIR, "../data/texture"))
+        self.timer.timeout.connect(self.resize_thumbnails)
 
     def create_ui(self):
-        """构建纹理缩略图面板，挂载到右侧扩展区"""
-        self.plugin_panel = QWidget()
-        layout = QVBoxLayout(self.plugin_panel)
-        layout.setContentsMargins(0,0,0,0)
-
-        self.texture_scroll = QScrollArea()
-        self.texture_scroll.setWidgetResizable(True)
-        self.texture_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.texture_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        container = QWidget()
-        self.texture_grid = QGridLayout(container)
+        scroll = ensure_model_settings_scroll(self.ctx)
+        scroll.resized.connect(lambda: self.timer.start(80))
+        self.plugin_panel = CollapsibleSection("普通纹理")
+        self.container = TextureGrid()
+        self.texture_grid = QGridLayout(self.container)
+        self.texture_grid.setContentsMargins(0, 0, 0, 0)
         self.texture_grid.setSpacing(6)
-        self.texture_grid.setContentsMargins(15,15,15,15)
-        for c in range(4):
-            self.texture_grid.setColumnStretch(c, 1)
-        self.texture_scroll.setWidget(container)
-        layout.addWidget(self.texture_scroll)
-        # 等待窗口布局完成再加载图片，延迟200ms
-        QTimer.singleShot(200, self.load_texture_images)
+        self.texture_grid.setAlignment(Qt.AlignTop)
+        self.container.resized.connect(lambda: self.timer.start(80))
+        self.plugin_panel.body_layout.addWidget(self.container)
+        self.help_label = QLabel("先在左侧加载模型，再点击纹理；过滤方式在下方 Mipmap 设置中选择。")
+        self.help_label.setWordWrap(True)
+        self.plugin_panel.body_layout.addWidget(self.help_label)
+        self.load_texture_images()
+        QTimer.singleShot(0, self.resize_thumbnails)
         return self.plugin_panel
 
+    def load_texture_images(self):
+        if not os.path.isdir(self.texture_dir):
+            self.help_label.setText("纹理目录不存在：" + self.texture_dir)
+            return
+        for path in sorted(os.listdir(self.texture_dir)):
+            if not path.lower().endswith((".png", ".jpg", ".jpeg")):
+                continue
+            path = os.path.join(self.texture_dir, path)
+            button = QPushButton()
+            button.setIcon(QIcon(QPixmap(path)))
+            button.setToolTip(os.path.basename(path))
+            button.clicked.connect(lambda checked, b=button, p=path: self.on_texture_btn_click(b, p))
+            index = len(self.buttons)
+            self.buttons[path] = button
+            self.texture_grid.addWidget(button, index // 4, index % 4)
+
+    def resize_thumbnails(self):
+        # 使用可视区宽度，避免旧按钮的最小宽度撑大内容后无法缩回。
+        width = self.ctx.model_settings_scroll.viewport().width()
+        size = max(50, min(100, (width - 58) // 4))
+        for button in self.buttons.values():
+            button.setFixedSize(size, size)
+            button.setIconSize(QSize(size - 8, size - 8))
+
     def on_window_resize(self):
-        # 窗口缩放延迟刷新纹理缩略图
-        self.timer.start(150)
+        self.timer.start(80)
+
+    def on_texture_btn_click(self, button, path):
+        if self.selected_texture_btn is not None:
+            self.selected_texture_btn.setStyleSheet("")
+        self.selected_texture_btn = button
+        self.selected_texture_path = path
+        button.setStyleSheet("border:3px solid #ff4400;")
+        # 选择普通贴图时切回普通材质；加载新模型时保留环境映射模式。
+        for plugin in self.ctx.plugins:
+            if getattr(plugin, "plugin_cls_name", "") == "environment_mapping":
+                plugin.reflection_check.setChecked(False)
+        self.ctx.info_display.append("选中纹理：" + os.path.basename(path))
+        if self.ctx.current_actor is not None:
+            self.apply_texture(path)
 
     def on_model_loaded(self, obj_path, actor, polydata):
-        # 加载模型后自动应用已选纹理
         if self.selected_texture_path:
             self.apply_texture(self.selected_texture_path)
 
-    def on_texture_btn_click(self, btn, tex_path):
-        if self.selected_texture_btn:
-            self.selected_texture_btn.setStyleSheet("")
-        btn.setStyleSheet("border:3px solid #ff4400;")
-        self.selected_texture_btn = btn
-        self.selected_texture_path = tex_path
-        self.ctx.info_display.append(f"\n选中纹理：{tex_path}")
-        if self.ctx.current_actor:
-            self.apply_texture(tex_path)
-
-    def apply_texture(self, tex_path):
-        # 纹理映射逻辑，完全隔离在插件
-        if tex_path.lower().endswith((".jpg", ".jpeg")):
-            reader = vtk.vtkJPEGReader()
-        else:
-            reader = vtk.vtkPNGReader()
-        reader.SetFileName(tex_path)
+    def apply_texture(self, path):
+        reader = vtk.vtkJPEGReader() if path.lower().endswith((".jpg", ".jpeg")) else vtk.vtkPNGReader()
+        reader.SetFileName(path)
         reader.Update()
+        if reader.GetOutput().GetNumberOfPoints() == 0:
+            self.ctx.info_display.append("纹理读取失败：" + path)
+            return
         texture = vtk.vtkTexture()
         texture.SetInputData(reader.GetOutput())
         texture.RepeatOn()
         texture.InterpolateOn()
-
-        tex_gen = vtk.vtkTextureMapToCylinder()
-        tex_gen.SetInputData(self.ctx.current_actor.GetMapper().GetInput())
-        tex_gen.Update()
-
+        texture.MipmapOn()
+        texture.SetMaximumAnisotropicFiltering(1)
+        # 每次从原始数据生成，避免映射过滤器叠加；保留模型自带 UV。
+        source = self.ctx.current_polydata
+        coords = source.GetPointData().GetTCoords()
+        if coords is None:
+            tex_gen = vtk.vtkTextureMapToCylinder()
+            tex_gen.SetInputData(source)
+            tex_gen.Update()
+            source = tex_gen.GetOutput()
         mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputData(tex_gen.GetOutput())
+        mapper.SetInputData(source)
+        mapper.ScalarVisibilityOff()
         self.ctx.current_actor.SetMapper(mapper)
         self.ctx.current_actor.SetTexture(texture)
+        self.texture = texture
         self.ctx.vtk_widget.GetRenderWindow().Render()
-        self.ctx.info_display.append(f"纹理已绑定模型：{os.path.basename(self.ctx.current_obj_path)}")
 
-    def load_texture_images(self):
-        max_c = 4
-        # 清空旧控件
-        while self.texture_grid.count():
-            item = self.texture_grid.takeAt(0)
-            w = item.widget()
-            if w:
-                w.deleteLater()
-
-        view_w = self.texture_scroll.viewport().width()
-        if view_w <= 20:
-            view_w = 300
-        spacing = self.texture_grid.spacing()
-        mg = self.texture_grid.contentsMargins()
-        avail = view_w - mg.left() - mg.right() - (max_c-1)*spacing
-        thumb_size = max(64, int(avail / max_c))
-
-        img_list = []
-        if os.path.exists(self.texture_dir):
-            for f in sorted(os.listdir(self.texture_dir)):
-                if f.lower().endswith((".png",".jpg",".jpeg")):
-                    img_list.append(os.path.join(self.texture_dir, f))
-        else:
-            print(f"[TexturePlugin] 纹理目录不存在: {self.texture_dir}")
-            return
-
-        # 只渲染真实图片，不再填充空占位按钮
-        for slot, path in enumerate(img_list):
-            r = slot // max_c
-            c = slot % max_c
-            pix = QPixmap(path).scaled(thumb_size, thumb_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            btn = QPushButton()
-            btn.setFixedSize(thumb_size, thumb_size)
-            btn.setIcon(QIcon(pix))
-            btn.setIconSize(QSize(thumb_size-8, thumb_size-8))
-            btn.clicked.connect(lambda ch, b=btn, p=path: self.on_texture_btn_click(b,p))
-            self.texture_grid.addWidget(btn, r, c)
+    def on_destroy(self):
+        self.timer.stop()

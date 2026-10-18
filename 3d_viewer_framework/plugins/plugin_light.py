@@ -1,7 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QFrame
+from PyQt5.QtWidgets import QVBoxLayout, QCheckBox
 from PyQt5.QtCore import Qt
 import vtk
 from plugins.base_plugin import Base3DPlugin
+from plugins.base_texture_ui import CollapsibleSection
 
 class LightPlugin(Base3DPlugin):
     plugin_cls_name = "light_control"
@@ -21,9 +22,8 @@ class LightPlugin(Base3DPlugin):
         self.chk_specular = None
 
     def create_ui(self):
-        self.plugin_panel = QFrame()
-        self.plugin_panel.setFrameShape(QFrame.StyledPanel)
-        layout = QVBoxLayout(self.plugin_panel)
+        self.plugin_panel = CollapsibleSection("光照设置")
+        layout = self.plugin_panel.body_layout
         layout.setSpacing(6)
         layout.setContentsMargins(10,10,10,10)
 
@@ -33,7 +33,7 @@ class LightPlugin(Base3DPlugin):
         self.chk_global.stateChanged.connect(self.on_global_toggle)
         layout.addWidget(self.chk_global)
 
-        h_layout = QHBoxLayout()
+        h_layout = QVBoxLayout()
         self.chk_ambient = QCheckBox("环境光")
         self.chk_ambient.setChecked(self.light_ambient)
         self.chk_ambient.stateChanged.connect(self.update_material)
