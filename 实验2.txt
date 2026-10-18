@@ -1,0 +1,2 @@
+任务1和任务2在computer_graphics\实验2下，task1_mipmap.py和task2_environment.py。windows可以直接run_task1.cmd和run_task2.cmd启动。
+进阶任务已实现在模型应用菜单下。
