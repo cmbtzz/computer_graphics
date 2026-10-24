@@ -2,8 +2,10 @@
 active_plugins:
   - experiment1_color # 实验一：HSV/RGB 与 RGB 立方体
   - view_orientation # 右上角 XYZ 指示器，缩放时保持屏幕大小
+  - transform_control # 选中模型的位置、旋转、缩放数值面板
+  - light_control   # 整个场景的灯光与光照效果开关
+  - material_control # 当前物体的材质参数及预设
   - texture_mapping # 纹理贴图插件
   - mipmap_mapping  # 普通贴图的六种过滤方式
   - environment_mapping # 同一张全景图的模型反射和背景
-  - light_control   # 光照材质调节插件
   - view_toolbar    # 顶部工具栏插件

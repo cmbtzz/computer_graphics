@@ -24,6 +24,10 @@ class Base3DPlugin:
         """【钩子】渲染刷新时触发"""
         pass
 
+    def on_selection_changed(self, obj_path, actor, polydata):
+        """选中物体改变；actor 为 None 表示取消选择。此钩子不重新加载模型。"""
+        pass
+
     def on_window_resize(self):
         """【钩子】窗口缩放触发（纹理缩略图重绘放这里）"""
         pass

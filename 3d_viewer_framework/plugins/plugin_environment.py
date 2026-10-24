@@ -101,6 +101,7 @@ class EnvironmentMappingPlugin(Base3DPlugin):
         self.panorama_path = DEFAULT_PANORAMA
         self.texture = None
         self.actor_state = None
+        self.saved_reflections = {}
         self.saved_view_angle = None
         self.mirror_observer = None
         self.background_state = None
@@ -277,8 +278,7 @@ class EnvironmentMappingPlugin(Base3DPlugin):
         actor = self.ctx.current_actor
         if actor is None:
             return
-        if self.actor_state is not None and self.actor_state[0] is not actor:
-            self.restore_actor()
+        self.bind_actor(actor)
         if self.actor_state is None:
             prop = vtk.vtkProperty()
             prop.DeepCopy(actor.GetProperty())
@@ -348,13 +348,36 @@ class EnvironmentMappingPlugin(Base3DPlugin):
         self.render()
 
     def on_model_loaded(self, obj_path, actor, polydata):
-        # 内核加载模型会清空场景，重新挂载背景，并给新模型恢复当前选项。
-        self.restore_actor()
+        # 导入新物体时继承当前选项，但保留场景中其他物体原有的材质。
+        self.bind_actor(actor)
         if self.reflection_check.isChecked() or self.background_check.isChecked():
             self.update_environment()
 
+    def bind_actor(self, actor):
+        if self.actor_state is not None and self.actor_state[0] is not actor:
+            self.saved_reflections[self.actor_state[0]] = (self.actor_state, self.mirror_observer)
+            self.actor_state, self.mirror_observer = None, None
+        if self.actor_state is None and actor in self.saved_reflections:
+            self.actor_state, self.mirror_observer = self.saved_reflections.pop(actor)
+        active = {model.actor for model in self.ctx.scene_models}
+        for previous in list(self.saved_reflections):
+            if previous not in active:
+                state, observer = self.saved_reflections.pop(previous)
+                if observer is not None:
+                    previous.GetMapper().RemoveObserver(observer)
+
+    def on_selection_changed(self, obj_path, actor, polydata):
+        self.bind_actor(actor)
+        self.reflection_check.blockSignals(True)
+        self.reflection_check.setChecked(self.actor_state is not None)
+        self.reflection_check.blockSignals(False)
+
     def on_destroy(self):
         self.restore_actor(sync_lighting=False)
+        for state, observer in self.saved_reflections.values():
+            self.actor_state, self.mirror_observer = state, observer
+            self.restore_actor(sync_lighting=False)
+        self.saved_reflections.clear()
         self.skybox.GetMapper().RemoveObserver(self.sky_observer)
         self.set_background_view(False)
         self.set_background_layer(False)

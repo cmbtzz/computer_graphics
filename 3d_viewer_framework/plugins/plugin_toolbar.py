@@ -96,6 +96,12 @@ class ToolbarViewPlugin(Base3DPlugin):
         """工具栏无需缩放逻辑，空实现"""
         pass
 
+    def on_selection_changed(self, obj_path, actor, polydata):
+        if actor is not None:
+            self.display_mode = int(actor.GetProperty().GetRepresentation() == vtk.VTK_WIREFRAME)
+            self.act_surface.setChecked(self.display_mode == 0)
+            self.act_wire.setChecked(self.display_mode == 1)
+
     def on_destroy(self):
         """销毁工具栏"""
         if self.toolbar:

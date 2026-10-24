@@ -30,6 +30,7 @@ class TexturePlugin(Base3DPlugin):
         self.selected_texture_btn = None
         self.texture = None
         self.buttons = {}
+        self.actor_paths = {}
         self.texture_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/texture"))
         self.timer = QTimer()
         self.timer.setSingleShot(True)
@@ -98,6 +99,16 @@ class TexturePlugin(Base3DPlugin):
         if self.selected_texture_path:
             self.apply_texture(self.selected_texture_path)
 
+    def on_selection_changed(self, obj_path, actor, polydata):
+        if self.selected_texture_btn is not None:
+            self.selected_texture_btn.setStyleSheet('')
+        self.selected_texture_path = self.actor_paths.get(actor)
+        self.selected_texture_btn = self.buttons.get(self.selected_texture_path)
+        if self.selected_texture_btn is not None:
+            self.selected_texture_btn.setStyleSheet('border:3px solid #ff4400;')
+        active = {model.actor for model in self.ctx.scene_models}
+        self.actor_paths = {a: path for a, path in self.actor_paths.items() if a in active}
+
     def apply_texture(self, path):
         reader = vtk.vtkJPEGReader() if path.lower().endswith((".jpg", ".jpeg")) else vtk.vtkPNGReader()
         reader.SetFileName(path)
@@ -124,6 +135,7 @@ class TexturePlugin(Base3DPlugin):
         mapper.ScalarVisibilityOff()
         self.ctx.current_actor.SetMapper(mapper)
         self.ctx.current_actor.SetTexture(texture)
+        self.actor_paths[self.ctx.current_actor] = path
         self.texture = texture
         self.ctx.vtk_widget.GetRenderWindow().Render()
 

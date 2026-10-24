@@ -2,7 +2,7 @@
 
 import math
 import vtk
-from PyQt5.QtCore import QElapsedTimer, QEvent, QObject, Qt, QTimer
+from PyQt5.QtCore import QElapsedTimer, QTimer
 
 from plugins.base_plugin import Base3DPlugin
 
@@ -25,13 +25,6 @@ def camera_rotation(back, up):
     return quaternion
 
 
-class NavigationEvents(QObject):
-    def __init__(self, plugin):
-        super().__init__(plugin.ctx.vtk_widget)
-        self.plugin = plugin
-
-    def eventFilter(self, watched, event):
-        return self.plugin.handle_navigation_event(event)
 
 
 class OrientationPlugin(Base3DPlugin):
@@ -55,8 +48,6 @@ class OrientationPlugin(Base3DPlugin):
         self.local_labels = []
         self.local_length = 0.
         self.render_observer = None
-        self.navigation_events = None
-        self.navigation_press = None
         self.navigation_animation = None
         self.navigation_clock = QElapsedTimer()
         self.navigation_timer = QTimer()
@@ -71,8 +62,7 @@ class OrientationPlugin(Base3DPlugin):
         self.widget = vtk.vtkCameraOrientationWidget()
         self.widget.SetParentRenderer(self.ctx.vtk_renderer)
         self.widget.SetAnimatorTotalFrames(12)
-        # VTK 默认 X/Y 轴点击使用 Z-up，且按历史点击记录翻面；这里改用
-        # 明确的六方向映射，遵循 Blender 点击约定，并适配本项目的 Y-up。
+        # 禁用原生鼠标处理，避免与场景视口的统一输入规则冲突。
         self.widget.ProcessEventsOff()
         rep = self.widget.GetRepresentation()
         rep.AnchorToUpperRight()
@@ -81,9 +71,7 @@ class OrientationPlugin(Base3DPlugin):
         rep.SetZPlusLabelText("Z")
         self.update_size()
         self.widget.On()
-        self.navigation_events = NavigationEvents(self)
-        self.ctx.vtk_widget.installEventFilter(self.navigation_events)
-        # VTK 仍负责显示、相机方向同步和角落定位，点击/拖动由上述过滤器处理。
+        # 指示器只显示方向；左键选择与右键自由观察统一由场景视口处理。
         self.resize_timer.start(0)
         return None
 
@@ -93,55 +81,6 @@ class OrientationPlugin(Base3DPlugin):
         return (round(point.x() * width / max(1, view.width())),
                 height - 1 - round(point.y() * height / max(1, view.height())))
 
-    def handle_navigation_event(self, event):
-        if self.widget is None:
-            return False
-        kind = event.type()
-        if kind == QEvent.Wheel:
-            self.stop_navigation_animation()
-            return False
-        if kind in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick):
-            self.stop_navigation_animation()
-            if event.button() != Qt.LeftButton:
-                return False
-            x, y = self.navigation_position(event.pos())
-            rep = self.widget.GetRepresentation()
-            if not rep.GetRenderer().IsInViewport(x, y):
-                return False
-            rep.ComputeInteractionState(x, y, 1)
-            axis, direction = rep.GetPickedAxis(), rep.GetPickedDir()
-            self.navigation_press = {"position": event.pos(), "last": event.pos(),
-                                     "axis": axis, "sign": 1 if direction == 0 else -1,
-                                     "dragging": False}
-            self.ctx.vtk_widget.setFocus()
-            self.ctx.vtk_widget.grabMouse()
-            return True
-        if kind == QEvent.MouseMove and self.navigation_press is not None:
-            press = self.navigation_press
-            movement = event.pos() - press["position"]
-            if not press["dragging"] and math.hypot(movement.x(), movement.y()) < 4:
-                return True
-            delta = event.pos() - press["last"]
-            if not press["dragging"]:
-                delta = movement
-                press["dragging"] = True
-            camera = self.ctx.vtk_renderer.GetActiveCamera()
-            camera.Azimuth(-delta.x() * 90 / self.SIZE)
-            camera.Elevation(delta.y() * 90 / self.SIZE)
-            camera.OrthogonalizeViewUp()
-            press["last"] = event.pos()
-            self.render_navigation()
-            return True
-        if kind == QEvent.MouseButtonRelease and self.navigation_press is not None:
-            if event.button() != Qt.LeftButton:
-                return False
-            press = self.navigation_press
-            self.navigation_press = None
-            self.ctx.vtk_widget.releaseMouse()
-            if not press["dragging"] and press["axis"] >= 0:
-                self.snap_to_axis(press["axis"], press["sign"])
-            return True
-        return False
 
     def snap_to_axis(self, axis, sign):
         """点击 +轴从正侧看向焦点，再次点击当前侧则翻到负侧。"""
@@ -359,15 +298,13 @@ class OrientationPlugin(Base3DPlugin):
     def on_window_resize(self):
         self.resize_timer.start(0)
 
+    def on_selection_changed(self, obj_path, actor, polydata):
+        self.local_center = polydata.GetCenter() if polydata is not None else None
+        self.set_local_visibility(actor is not None)
+
     def on_destroy(self):
         self.resize_timer.stop()
         self.stop_navigation_animation()
-        if self.navigation_press is not None:
-            self.ctx.vtk_widget.releaseMouse()
-            self.navigation_press = None
-        if self.navigation_events is not None:
-            self.ctx.vtk_widget.removeEventFilter(self.navigation_events)
-            self.navigation_events = None
         if self.render_observer is not None:
             self.local_renderer.RemoveObserver(self.render_observer)
             self.render_observer = None
