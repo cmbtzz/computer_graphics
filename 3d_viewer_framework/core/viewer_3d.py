@@ -6,17 +6,19 @@
 import sys
 import os
 from dataclasses import dataclass
+if sys.platform == 'win32':
+    from ctypes import wintypes
 import vtk
-from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget,
                              QFileDialog, QPushButton, QTextEdit, QTreeView, QFileSystemModel, QSplitter,
                              QMenuBar, QMenu, QAction, QFrame, QAbstractItemView)
 from PyQt5.QtCore import QDir, Qt, pyqtSignal
 from core.scene_navigation import SceneNavigation
 from core.model_normals import generate_normals
+from core.render_viewport import RenderViewport
 
 
-class SceneViewport(QVTKRenderWindowInteractor):
+class SceneViewport(RenderViewport):
     files_dropped = pyqtSignal(list)
     scene_clicked = pyqtSignal(object)
 
@@ -173,6 +175,9 @@ class VTKViewerCore(QMainWindow):
         main_v_layout.setSpacing(4)
 
         top_h_splitter = QSplitter(Qt.Horizontal)
+        # VTK 是原生 OpenGL 子窗口；实时拖动会反复缩放它并重建缓冲区。
+        # 使用位置指示线，松手后一次提交三个分栏的最终尺寸。
+        top_h_splitter.setOpaqueResize(False)
         main_v_layout.addWidget(top_h_splitter, stretch=8)
 
         # 底部信息栏
@@ -416,6 +421,16 @@ class VTKViewerCore(QMainWindow):
         text = f"OBJ File: {obj_file}\nVertices: {pts}\nFaces: {faces}\n"
         self.ctx.info_display.setPlainText(text)
 
+    def nativeEvent(self, event_type, message):
+        if sys.platform == 'win32':
+            msg = wintypes.MSG.from_address(int(message))
+            # Windows 拖动边框使用原生模态事件循环，单纯限帧无法避免期间重绘。
+            if msg.message in (0x0231, 0x0232):  # WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE
+                resizing = msg.message == 0x0231
+                for view in self.findChildren(RenderViewport):
+                    view.set_interactive_resize(resizing)
+        return super().nativeEvent(event_type, message)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # 窗口缩放分发插件钩子
@@ -423,8 +438,11 @@ class VTKViewerCore(QMainWindow):
             plugin.on_window_resize()
 
     def closeEvent(self, event):
+        self.ctx.vtk_widget.stop_rendering()
         self.ctx.vtk_widget.navigation.stop()
         # 程序关闭释放插件资源
         for plugin in self.plugin_instances:
             plugin.on_destroy()
+        # 在 Qt 销毁原生窗口句柄前释放模型视口的 OpenGL 资源。
+        self.ctx.vtk_widget.GetRenderWindow().Finalize()
         event.accept()

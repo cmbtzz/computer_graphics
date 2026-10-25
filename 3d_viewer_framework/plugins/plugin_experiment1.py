@@ -3,7 +3,6 @@
 import colorsys
 
 import vtk
-from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PyQt5.QtCore import QPoint, Qt, QTimer
 from PyQt5.QtGui import QColor, QPainter, QPolygon
 from PyQt5.QtWidgets import (
@@ -12,6 +11,7 @@ from PyQt5.QtWidgets import (
 )
 
 from plugins.base_plugin import Base3DPlugin
+from core.render_viewport import RenderViewport
 
 
 def hsv_to_rgb(h, s, v):
@@ -71,6 +71,7 @@ class Experiment1Plugin(Base3DPlugin):
         self.marker_actors = []
         self.tabs = None
         self.center_stack = None
+        self.marker_observer = None
 
     def create_ui(self):
         """右侧放两个选项卡，中央随选项卡切换实验预览和模型。"""
@@ -91,7 +92,7 @@ class Experiment1Plugin(Base3DPlugin):
         cube_panel.setFrameShape(QFrame.StyledPanel)
         cube_layout = QVBoxLayout(cube_panel)
         cube_layout.addWidget(QLabel("RGB 显示区"))
-        self.cube_widget = QVTKRenderWindowInteractor(cube_panel)
+        self.cube_widget = RenderViewport(cube_panel)
         self.cube_widget.setMinimumSize(280, 280)
         cube_layout.addWidget(self.cube_widget, 1)
         display_layout.addWidget(cube_panel, 1)
@@ -168,9 +169,9 @@ class Experiment1Plugin(Base3DPlugin):
             if toolbar is not None:
                 toolbar.setVisible(model_tab_active)
         if model_tab_active:
-            self.ctx.vtk_widget.GetRenderWindow().Render()
+            self.ctx.vtk_widget.request_render()
         elif self.cube_widget is not None:
-            self.update_marker_position()
+            self.cube_widget.request_render()
 
     def on_color_changed(self, channel):
         """根据用户修改的颜色空间，计算并更新另一个颜色空间。"""
@@ -206,7 +207,8 @@ class Experiment1Plugin(Base3DPlugin):
         self.cube_widget.GetRenderWindow().AddRenderer(renderer)
         interactor = self.cube_widget.GetRenderWindow().GetInteractor()
         interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
-        interactor.AddObserver("EndInteractionEvent", self.update_marker_position)
+        # 在实际绘制时按最终尺寸和相机位置投影标记，不额外触发第二帧。
+        self.marker_observer = renderer.AddObserver("StartEvent", self.update_marker_position)
 
         cube = vtk.vtkCubeSource()
         cube.SetBounds(0, 1, 0, 1, 0, 1)
@@ -274,8 +276,7 @@ class Experiment1Plugin(Base3DPlugin):
     def initialize_cube(self):
         if self.cube_widget is not None:
             self.cube_widget.Initialize()
-            self.cube_widget.GetRenderWindow().Render()
-            self.update_marker_position()
+            self.cube_widget.request_render()
 
     def update_color_display(self):
         self.triangle.set_color(self.rgb)
@@ -289,8 +290,7 @@ class Experiment1Plugin(Base3DPlugin):
         inside = all(0 < component < 255 for component in self.rgb)
         self.cube_actor.GetProperty().SetOpacity(0.55 if inside else 1.0)
 
-        self.cube_widget.GetRenderWindow().Render()
-        self.update_marker_position()
+        self.cube_widget.request_render()
 
     def update_marker_position(self, _interactor=None, _event=None):
         if self.cube_renderer is None:
@@ -301,8 +301,11 @@ class Experiment1Plugin(Base3DPlugin):
         x, y, _ = self.cube_renderer.GetDisplayPoint()
         for marker in self.marker_actors:
             marker.SetPosition(x, y)
-        self.cube_widget.GetRenderWindow().Render()
 
     def on_destroy(self):
         if self.cube_widget is not None:
+            self.cube_widget.stop_rendering()
+            if self.marker_observer is not None:
+                self.cube_renderer.RemoveObserver(self.marker_observer)
+                self.marker_observer = None
             self.cube_widget.GetRenderWindow().Finalize()

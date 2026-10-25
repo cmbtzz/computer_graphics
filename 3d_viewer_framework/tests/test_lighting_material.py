@@ -160,7 +160,9 @@ def run():
             light.chk_diffuse.setChecked(True)
             assert first.GetProperty().GetDiffuse() == store.ensure(first).diffuse
             window.resize(1100, 700)
-            settle()
+            # 缩放现在异步提交；等缩略图布局和视口尺寸都稳定后再检查。
+            app.processEvents()
+            QTest.qWait(250)
             assert window.ctx.model_settings_scroll.horizontalScrollBar().maximum() == 0, [
                 (p.plugin_cls_name, p.plugin_panel.minimumSizeHint().width())
                 for p in window.ctx.plugins if p.plugin_panel is not None]
