@@ -44,13 +44,14 @@ def ensure_model_settings_scroll(ctx):
         parent.replaceWidget(parent.indexOf(content), scroll)
         scroll.setWidget(content)
         parent.setSizes(sizes)
+        # replaceWidget 后需要显式显示；页签分支则由 QTabWidget 管理可见性。
+        scroll.show()
     else:
         raise RuntimeError("未找到模型设置容器")
     ctx.right_extension_layout.setAlignment(Qt.AlignTop)
     ctx.right_extension_layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
     ctx.right_extension_layout.setContentsMargins(8, 8, 8, 8)
     ctx.model_settings_scroll = scroll
-    scroll.show()
     return scroll
 
 
