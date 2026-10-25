@@ -12,7 +12,7 @@ import vtk
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget,
                              QFileDialog, QPushButton, QTextEdit, QTreeView, QFileSystemModel, QSplitter,
                              QMenuBar, QMenu, QAction, QFrame, QAbstractItemView)
-from PyQt5.QtCore import QDir, Qt, pyqtSignal
+from PyQt5.QtCore import QDir, Qt, QTimer, pyqtSignal
 from core.scene_navigation import SceneNavigation
 from core.model_normals import generate_normals
 from core.render_viewport import RenderViewport
@@ -152,6 +152,11 @@ class VTKViewerCore(QMainWindow):
 
         # 插件管理器
         self.plugin_instances = []
+        self._interactive_resize = False
+        self._layout_refresh_timer = QTimer(self)
+        self._layout_refresh_timer.setSingleShot(True)
+        self._layout_refresh_timer.setInterval(RenderViewport.RESIZE_SETTLE_MS + 30)
+        self._layout_refresh_timer.timeout.connect(self.refresh_layout)
 
         self.create_menu()
         self.build_base_layout()
@@ -178,6 +183,7 @@ class VTKViewerCore(QMainWindow):
         # VTK 是原生 OpenGL 子窗口；实时拖动会反复缩放它并重建缓冲区。
         # 使用位置指示线，松手后一次提交三个分栏的最终尺寸。
         top_h_splitter.setOpaqueResize(False)
+        top_h_splitter.splitterMoved.connect(self.schedule_layout_refresh)
         main_v_layout.addWidget(top_h_splitter, stretch=8)
 
         # 底部信息栏
@@ -421,14 +427,33 @@ class VTKViewerCore(QMainWindow):
         text = f"OBJ File: {obj_file}\nVertices: {pts}\nFaces: {faces}\n"
         self.ctx.info_display.setPlainText(text)
 
+    def schedule_layout_refresh(self):
+        if not self._interactive_resize:
+            self._layout_refresh_timer.start()
+
+    def refresh_layout(self):
+        if not self.isVisible() or self._interactive_resize:
+            return
+        # 原生 OpenGL 子窗口移动后，Qt 可能仍复用旧位置的 backing-store 像素。
+        # 布局稳定时同时重画 Qt 区域和可见视口，不能只更新 VTK 的帧缓冲区。
+        self.update()
+        self.centralWidget().update()
+        for view in self.findChildren(RenderViewport):
+            view.request_render()
+
     def nativeEvent(self, event_type, message):
         if sys.platform == 'win32':
             msg = wintypes.MSG.from_address(int(message))
             # Windows 拖动边框使用原生模态事件循环，单纯限帧无法避免期间重绘。
             if msg.message in (0x0231, 0x0232):  # WM_ENTERSIZEMOVE / WM_EXITSIZEMOVE
                 resizing = msg.message == 0x0231
+                self._interactive_resize = resizing
+                if resizing:
+                    self._layout_refresh_timer.stop()
                 for view in self.findChildren(RenderViewport):
                     view.set_interactive_resize(resizing)
+                if not resizing:
+                    self.schedule_layout_refresh()
         return super().nativeEvent(event_type, message)
 
     def resizeEvent(self, event):
@@ -436,8 +461,10 @@ class VTKViewerCore(QMainWindow):
         # 窗口缩放分发插件钩子
         for plugin in self.plugin_instances:
             plugin.on_window_resize()
+        self.schedule_layout_refresh()
 
     def closeEvent(self, event):
+        self._layout_refresh_timer.stop()
         self.ctx.vtk_widget.stop_rendering()
         self.ctx.vtk_widget.navigation.stop()
         # 程序关闭释放插件资源
