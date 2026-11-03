@@ -8,4 +8,5 @@ active_plugins:
   - texture_mapping # 纹理贴图插件
   - mipmap_mapping  # 普通贴图的六种过滤方式
   - environment_mapping # 同一张全景图的模型反射和背景
+  - ray_tracing # 独立光线追踪页签：中心窗口实时渲染 OBJ 场景
   - view_toolbar    # 顶部工具栏插件

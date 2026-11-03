@@ -149,6 +149,8 @@ class Experiment1Plugin(Base3DPlugin):
         model_controls = splitter.replaceWidget(right_index, self.tabs)
         self.tabs.addTab(self.plugin_panel, "实验1")
         self.tabs.addTab(model_controls, "模型查看")
+        self.ctx.plugin_tabs = self.tabs
+        self.ctx.center_stack = self.center_stack
         self.center_stack.show()
         self.tabs.show()
         splitter.setSizes(column_sizes)
@@ -163,7 +165,11 @@ class Experiment1Plugin(Base3DPlugin):
 
     def on_tab_changed(self, _index=None):
         model_tab_active = self.tabs.currentIndex() == 1
-        self.center_stack.setCurrentIndex(1 if model_tab_active else 0)
+        custom_view = getattr(self.tabs.currentWidget(), '_center_view', None)
+        if custom_view is not None:
+            self.center_stack.setCurrentWidget(custom_view)
+        else:
+            self.center_stack.setCurrentIndex(1 if model_tab_active else 0)
         for plugin in self.ctx.plugins:
             toolbar = getattr(plugin, "toolbar", None)
             if toolbar is not None:

@@ -273,12 +273,17 @@ class EnvironmentMappingPlugin(Base3DPlugin):
                 for plugin in self.ctx.plugins:
                     if getattr(plugin, "plugin_cls_name", "") == "light_control":
                         plugin.update_material()
+            for plugin in self.ctx.plugins:
+                plugin.on_environment_mode_changed(actor, False)
 
     def apply_reflection(self):
         actor = self.ctx.current_actor
         if actor is None:
             return
         self.bind_actor(actor)
+        # 在复制 shader / mapper 快照前归还其他着色插件的资源，避免保存自定义 VAO 状态。
+        for plugin in self.ctx.plugins:
+            plugin.on_environment_mode_changed(actor, True)
         if self.actor_state is None:
             prop = vtk.vtkProperty()
             prop.DeepCopy(actor.GetProperty())

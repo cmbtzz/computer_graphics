@@ -312,7 +312,9 @@ class VTKViewerCore(QMainWindow):
             self.ctx.scene_models.clear()
         elif self.ctx.scene_models:
             # 保留源模型尺寸；新实例排在场景右侧，并对齐底部与 Z 中心。
-            bounds = [model.actor.GetBounds() for model in self.ctx.scene_models]
+            # 实验布景的地面/墙面不参与新 OBJ 的自动排列范围。
+            placement_models = [model for model in self.ctx.scene_models if not getattr(model, 'lab4_stage', False)]
+            bounds = [model.actor.GetBounds() for model in (placement_models or self.ctx.scene_models)]
             source = polydata.GetBounds()
             right = max(b[1] for b in bounds)
             bottom = min(b[2] for b in bounds)
