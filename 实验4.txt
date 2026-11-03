@@ -1,0 +1,2 @@
+任务1和任务2在computer_graphics\实验4下，task1_raytracing.py和task2_bump_mapping.py，分别演示光线追踪和凹凸映射。windows可以直接run_task1.cmd和run_task2.cmd启动。
+进阶任务已实现在3d_viewer_framework的“光线追踪”页签下，也可直接run_advanced.cmd启动，支持模型凹凸映射、反射、折射和阴影。

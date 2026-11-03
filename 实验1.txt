@@ -1,0 +1,2 @@
+实验1已集成在computer_graphics\3d_viewer_framework下，代码为plugins\plugin_experiment1.py。在仓库根目录运行.venv\Scripts\python.exe 3d_viewer_framework\main.py，进入右侧“实验1”页签即可。
+支持HSV/RGB参数联动、颜色三角形显示和RGB立方体交互，拖动立方体可旋转，滚轮可缩放。

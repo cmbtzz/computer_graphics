@@ -1,0 +1,2 @@
+任务1在computer_graphics\实验3下，task1_lighting.py。windows可以直接run_task1.cmd启动，观察不同光照和材质组合，支持调整灯光位置、颜色及材质参数。
+进阶任务已实现在3d_viewer_framework的“模型查看”页签下，通过右侧“光照设置”和“材质设置”面板操作。

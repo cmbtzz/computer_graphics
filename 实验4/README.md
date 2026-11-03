@@ -146,3 +146,17 @@ GLSL 不支持递归，因此使用显式的深度优先射线栈，分别追踪
 ```
 
 GPU 自检覆盖：启用映射产生可见差异、零强度恢复原始照明、关闭映射后两侧一致、常量高度图不扰动法线、负强度改变凹凸方向、法线可视化、移动光源、更换高度图以及球体上的映射。通过后打印 `All bump mapping GPU checks passed.` 并以状态码 0 退出。
+
+## 进阶要求 光线追踪插件
+
+进阶功能已接入现有 `3d_viewer_framework`，右侧“光线追踪”与“模型查看”并列，选择后在中心窗口持续实时渲染完整 OBJ 场景。提供一键布景、模型凹凸材质、反射、折射和阴影，相机、灯光、材质与 Transform 自动同步。原有任务1、任务2仍可独立运行。
+
+双击 `run_advanced.cmd` 进入光线追踪页签，中心直接出图。完整操作和算法范围见 [光线追踪使用说明](../3d_viewer_framework/光线追踪使用说明.md)。
+
+```powershell
+# 直接运行带示例瓶子、地面、墙面、参照物和光源的演示
+.venv\Scripts\python.exe 实验4\advanced_viewer.py --demo
+
+# 验证真实模型上的凹凸、反射、折射及场景参数同步
+.venv\Scripts\python.exe 实验4\advanced_viewer.py --self-test
+```
