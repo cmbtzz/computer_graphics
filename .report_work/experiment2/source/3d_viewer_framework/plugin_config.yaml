@@ -1,0 +1,9 @@
+# 启用的插件列表，注释/删除对应项即可关闭功能
+active_plugins:
+  - experiment1_color # 实验一：HSV/RGB 与 RGB 立方体
+  - view_orientation # 右上角 XYZ 指示器，缩放时保持屏幕大小
+  - texture_mapping # 纹理贴图插件
+  - mipmap_mapping  # 普通贴图的六种过滤方式
+  - environment_mapping # 同一张全景图的模型反射和背景
+  - light_control   # 光照材质调节插件
+  - view_toolbar    # 顶部工具栏插件

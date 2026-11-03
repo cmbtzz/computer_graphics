@@ -1,0 +1,33 @@
+{
+  "task1_menu_items": [
+    "GL_NEAREST",
+    "GL_LINEAR",
+    "GL_NEAREST_MIPMAP_NEAREST",
+    "GL_LINEAR_MIPMAP_NEAREST",
+    "GL_NEAREST_MIPMAP_LINEAR",
+    "GL_LINEAR_MIPMAP_LINEAR",
+    "重置视角 (R)"
+  ],
+  "task1_menu_filter_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "task2_menu_items": [
+    "显示立方体 (C)",
+    "重置视角 (R)"
+  ],
+  "task2_menu_cube_states": [
+    true,
+    false,
+    true
+  ],
+  "task2_mouse_wheel_distances": [
+    7.8,
+    6.917979406393828,
+    7.8
+  ]
+}

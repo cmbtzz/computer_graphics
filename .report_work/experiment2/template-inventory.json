@@ -1,0 +1,70 @@
+{
+  "[Content_Types].xml": {
+    "size": 1881,
+    "sha256": "46d66b4a25b079c999a003ee243dbe1eca9e90254e7ca677d9f78b2afd6cfe30"
+  },
+  "_rels/.rels": {
+    "size": 737,
+    "sha256": "c30fe099dbcfed4ecc4ae544ccf82f432c8d3bb665e2a301df283738b196d803"
+  },
+  "word/document.xml": {
+    "size": 25638,
+    "sha256": "3dac54b37ab7b938e36f36830615c32d49d61af0ab078fb99dc3242ba7ae0d8c"
+  },
+  "word/_rels/document.xml.rels": {
+    "size": 1342,
+    "sha256": "500fee4ecb3400c0abb30405f39f13cf5dd97edb352b1e12456466ae08ae17ce"
+  },
+  "word/footnotes.xml": {
+    "size": 3018,
+    "sha256": "778b938054dbdbbd6ac422f261cefd09197f8913bcfe6da81294907d3bb6df57"
+  },
+  "word/endnotes.xml": {
+    "size": 3012,
+    "sha256": "e9435fe66c035579520bec0c614edacf8d42fb94cde5617c90aa16262bf0eaca"
+  },
+  "word/footer1.xml": {
+    "size": 2836,
+    "sha256": "2463d58e9f2bf554567f3935a5ab0777d061ad53c48eacca9a33b6e4c5136aa5"
+  },
+  "word/media/image1.jpeg": {
+    "size": 42330,
+    "sha256": "41952b618d888e0927ddd390d9259947eb4ab9cfe761915e619376776efe67df"
+  },
+  "word/theme/theme1.xml": {
+    "size": 8724,
+    "sha256": "3a2aeb9bef6b86fcb2a98dad83a943e4bf31ba4af5bbd20844c4abbcfa50b0f6"
+  },
+  "word/settings.xml": {
+    "size": 4818,
+    "sha256": "f82309862f3cbac7ff9e0483f872cc5f2114a4f44beb9a1148e0d3612c03347d"
+  },
+  "word/_rels/settings.xml.rels": {
+    "size": 316,
+    "sha256": "49358a4d4f6a3960eb3b5c9374de084cf0fcef27b791ffdfb2694b2d70650714"
+  },
+  "word/styles.xml": {
+    "size": 19065,
+    "sha256": "92d9378476da2f790ae560c7b1efe917e5db3b24ddc34b5160f2ca4e0f210a71"
+  },
+  "word/webSettings.xml": {
+    "size": 1122,
+    "sha256": "df145be3e3e7a63f224743e8ac0c774a333614ad6d70295ea8faed831f129012"
+  },
+  "word/fontTable.xml": {
+    "size": 4035,
+    "sha256": "221b8db787a4cc96416d0039e9f6f44c498890a178a48612e4d467630c9498c7"
+  },
+  "docProps/core.xml": {
+    "size": 827,
+    "sha256": "db531cdf2399085d762bcb68b5efd97e3cf02490c5ff01578ac62be9469ce530"
+  },
+  "docProps/app.xml": {
+    "size": 857,
+    "sha256": "634add4139b149c9f9185573430d5f011bd6622cafe0089611d9bbd07d38a3ec"
+  },
+  "docProps/custom.xml": {
+    "size": 382,
+    "sha256": "9b9e4acbf62a7b9b57769b4668cc740a79fd51159aeb156d838026117f6e29e0"
+  }
+}

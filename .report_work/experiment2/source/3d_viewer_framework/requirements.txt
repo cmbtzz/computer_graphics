@@ -1,0 +1,5 @@
+PyQt5>=5.15
+vtk>=9.3
+PyYAML>=6
+numpy>=1.24
+OpenEXR>=3.3
