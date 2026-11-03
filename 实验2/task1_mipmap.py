@@ -31,6 +31,8 @@ FILTERS = (
      "三线性：层内双线性、层间线性，减轻远处走样与层间跳变。"),
 )
 
+END_WALL_IMAGE = Path(__file__).resolve().parent / "assets" / "corridor_end_cat.png"
+
 
 def make_textures(size=512):
     """用固定种子生成可重复的砖墙、木地板、灰泥天花板和棋盘纹理。"""
@@ -82,13 +84,18 @@ class CorridorView(QOpenGLWidget):
             gl.glDisable(gl.GL_LIGHTING)
             gl.glEnable(gl.GL_TEXTURE_2D)
             gl.glTexEnvi(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_REPLACE)
-            self.textures = [int(t) for t in gl.glGenTextures(4)]
+            # 照片独立于四张可重复材质，并翻转行方向以匹配 OpenGL 的纹理原点。
+            with Image.open(END_WALL_IMAGE) as end_image:
+                end_pixels = np.asarray(end_image.convert("RGB").transpose(Image.Transpose.FLIP_TOP_BOTTOM))
+            pixels_list = make_textures() + [end_pixels]
+            self.textures = [int(t) for t in gl.glGenTextures(len(pixels_list))]
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-            for texture, pixels in zip(self.textures, make_textures()):
+            for index, (texture, pixels) in enumerate(zip(self.textures, pixels_list)):
                 gl.glBindTexture(gl.GL_TEXTURE_2D, texture)
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT)
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_REPEAT)
-                # 构造 512²、256²、…、1² 完整链，避免缺层导致纹理不完整。
+                wrap = gl.GL_CLAMP_TO_EDGE if index == 4 else gl.GL_REPEAT
+                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, wrap)
+                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, wrap)
+                # 各纹理均构造直到 1×1 的完整链，避免缺层导致纹理不完整。
                 image, level = Image.fromarray(pixels), 0
                 while True:
                     gl.glTexImage2D(gl.GL_TEXTURE_2D, level, gl.GL_RGB,
@@ -117,21 +124,25 @@ class CorridorView(QOpenGLWidget):
         direction = np.array([math.sin(yaw) * math.cos(pitch), math.sin(pitch),
                               -math.cos(yaw) * math.cos(pitch)])
         gluLookAt(*self.eye, *(self.eye + direction), 0, 1, 0)
-        # 走廊从 z=6 延伸至 z=-100，四个独立四边形明确展示透视缩小。
+        # 四个长表面展示透视缩小；尽头用 6×4 的照片端面封闭。
         surfaces = (
             (0, ((-3, -2, 6), (-3, -2, -100), (-3, 2, -100), (-3, 2, 6)), 53, 2),
             (0, ((3, -2, -100), (3, -2, 6), (3, 2, 6), (3, 2, -100)), 53, 2),
             (1, ((-3, -2, 6), (3, -2, 6), (3, -2, -100), (-3, -2, -100)), 3, 53),
             (2, ((-3, 2, -100), (3, 2, -100), (3, 2, 6), (-3, 2, 6)), 3, 53),
+            (4, ((-3, -2, -100), (3, -2, -100), (3, 2, -100), (-3, 2, -100)), 1, 1),
         )
         for texture_index, vertices, u, v in surfaces:
-            gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures[3 if self.checker else texture_index])
+            # 棋盘模式只替换墙壁、地板和天花板，照片始终完整显示一次。
+            selected = 3 if self.checker and texture_index != 4 else texture_index
+            repeat = 1.0 if texture_index == 4 else self.repeat
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures[selected])
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, FILTERS[self.filter_index][1])
             mag = gl.GL_NEAREST if self.filter_index in (0, 2, 4) else gl.GL_LINEAR
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, mag)
             gl.glBegin(gl.GL_QUADS)
             for uv, vertex in zip(((0, 0), (u, 0), (u, v), (0, v)), vertices):
-                gl.glTexCoord2f(uv[0] * self.repeat, uv[1] * self.repeat)
+                gl.glTexCoord2f(uv[0] * repeat, uv[1] * repeat)
                 gl.glVertex3f(*vertex)
             gl.glEnd()
 
